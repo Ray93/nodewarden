@@ -23,6 +23,7 @@ export type JwtUnsafeReason = 'missing' | 'default' | 'too_short';
 
 export interface BootstrapAppResult {
   defaultKdfIterations: number;
+  masterPasswordMinLength: number;
   jwtWarning: { reason: JwtUnsafeReason; minLength: number } | null;
   session: SessionState | null;
   profile: Profile | null;
@@ -32,6 +33,7 @@ export interface BootstrapAppResult {
 
 export interface InitialAppBootstrapState {
   defaultKdfIterations: number;
+  masterPasswordMinLength: number;
   jwtWarning: { reason: JwtUnsafeReason; minLength: number } | null;
   session: SessionState | null;
   phase: AppPhase;
@@ -96,8 +98,14 @@ function readWindowBootstrap(): WebBootstrapResponse {
   return raw && typeof raw === 'object' ? raw : {};
 }
 
-function normalizeBootstrapResponse(boot: WebBootstrapResponse): Pick<InitialAppBootstrapState, 'defaultKdfIterations' | 'jwtWarning'> {
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  const normalized = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : fallback;
+}
+
+function normalizeBootstrapResponse(boot: WebBootstrapResponse): Pick<InitialAppBootstrapState, 'defaultKdfIterations' | 'masterPasswordMinLength' | 'jwtWarning'> {
   const defaultKdfIterations = Number(boot.defaultKdfIterations || 600000);
+  const masterPasswordMinLength = normalizePositiveInteger(boot.masterPasswordMinLength, 12);
   const jwtUnsafeReason = boot.jwtUnsafeReason || null;
   const jwtWarning = jwtUnsafeReason
     ? {
@@ -108,6 +116,7 @@ function normalizeBootstrapResponse(boot: WebBootstrapResponse): Pick<InitialApp
 
   return {
     defaultKdfIterations,
+    masterPasswordMinLength,
     jwtWarning,
   };
 }
@@ -164,12 +173,13 @@ function buildTransientProfile(token: TokenSuccess, email: string, fallbackProfi
 }
 
 export function readInitialAppBootstrapState(): InitialAppBootstrapState {
-  const { defaultKdfIterations, jwtWarning } = normalizeBootstrapResponse(readWindowBootstrap());
+  const { defaultKdfIterations, masterPasswordMinLength, jwtWarning } = normalizeBootstrapResponse(readWindowBootstrap());
   const session = loadSession();
   const hasInviteCode = !!readInviteCodeFromUrl();
 
   return {
     defaultKdfIterations,
+    masterPasswordMinLength,
     jwtWarning,
     session,
     phase: jwtWarning ? 'login' : session ? 'locked' : hasInviteCode ? 'register' : 'login',
@@ -180,11 +190,13 @@ export async function bootstrapAppSession(initial: InitialAppBootstrapState = re
   const remoteBoot = await fetchBootstrapConfig();
   const normalizedBoot = normalizeBootstrapResponse(remoteBoot);
   const defaultKdfIterations = normalizedBoot.defaultKdfIterations || initial.defaultKdfIterations;
+  const masterPasswordMinLength = normalizedBoot.masterPasswordMinLength || initial.masterPasswordMinLength;
   const jwtWarning = normalizedBoot.jwtWarning ?? initial.jwtWarning;
 
   if (jwtWarning) {
     return {
       defaultKdfIterations,
+      masterPasswordMinLength,
       jwtWarning,
       session: null,
       profile: null,
@@ -196,6 +208,7 @@ export async function bootstrapAppSession(initial: InitialAppBootstrapState = re
   if (!loaded) {
     return {
       defaultKdfIterations,
+      masterPasswordMinLength,
       jwtWarning: null,
       session: null,
       profile: null,
@@ -207,6 +220,7 @@ export async function bootstrapAppSession(initial: InitialAppBootstrapState = re
   if (cachedProfile) {
     return {
       defaultKdfIterations,
+      masterPasswordMinLength,
       jwtWarning: null,
       session: loaded,
       profile: cachedProfile,
@@ -217,6 +231,7 @@ export async function bootstrapAppSession(initial: InitialAppBootstrapState = re
 
   return {
     defaultKdfIterations,
+    masterPasswordMinLength,
     jwtWarning: null,
     session: loaded,
     profile: null,
