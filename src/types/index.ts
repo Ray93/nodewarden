@@ -51,6 +51,7 @@ export interface User {
   verifyDevices?: boolean;
   totpSecret: string | null;
   totpRecoveryCode: string | null;
+  apiKey: string | null;
   createdAt: string;
   updatedAt: string;
 }
