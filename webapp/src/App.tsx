@@ -65,6 +65,7 @@ import useBackupActions from '@/hooks/useBackupActions';
 import useVaultSendActions from '@/hooks/useVaultSendActions';
 import { useToastManager } from '@/hooks/useToastManager';
 import { t } from '@/lib/i18n';
+import { MASTER_PASSWORD_MIN_LENGTH } from '@/lib/password-policy';
 import { APP_NOTIFY_EVENT, type AppNotifyDetail } from '@/lib/app-notify';
 import { dispatchBackupProgress, type BackupProgressDetail } from '@/lib/backup-restore-progress';
 import { clearOfflineUnlockRecord } from '@/lib/offline-auth';
@@ -779,8 +780,8 @@ export default function App() {
       pushToast('error', t('txt_please_input_email_and_password'));
       return;
     }
-    if (registerValues.password.length < 12) {
-      pushToast('error', t('txt_master_password_must_be_at_least_12_chars'));
+    if (registerValues.password.length < MASTER_PASSWORD_MIN_LENGTH) {
+      pushToast('error', t('txt_master_password_must_be_at_least_min_chars', { min: MASTER_PASSWORD_MIN_LENGTH }));
       return;
     }
     if (registerValues.password !== registerValues.password2) {

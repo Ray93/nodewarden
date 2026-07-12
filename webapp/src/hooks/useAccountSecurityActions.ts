@@ -41,6 +41,7 @@ import {
   createTwoFactorPasskeyCredential,
 } from '@/lib/account-passkeys';
 import { t } from '@/lib/i18n';
+import { MASTER_PASSWORD_MIN_LENGTH } from '@/lib/password-policy';
 import type { AppConfirmState } from '@/components/AppGlobalOverlays';
 import type { AuthedFetch } from '@/lib/api/shared';
 import type { AccountPasskeyCredential, AuthorizedDevice, Profile, SessionState, TwoFactorPasskeySettings, YubiKeyOtpSettings } from '@/lib/types';
@@ -108,8 +109,8 @@ export default function useAccountSecurityActions(options: UseAccountSecurityAct
           onNotify('error', t('txt_current_new_password_is_required'));
           return;
         }
-        if (nextPassword.length < 12) {
-          onNotify('error', t('txt_new_password_must_be_at_least_12_chars'));
+        if (nextPassword.length < MASTER_PASSWORD_MIN_LENGTH) {
+          onNotify('error', t('txt_new_password_must_be_at_least_min_chars', { min: MASTER_PASSWORD_MIN_LENGTH }));
           return;
         }
         if (nextPassword !== nextPassword2) {
